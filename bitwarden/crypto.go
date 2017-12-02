@@ -14,6 +14,7 @@ import (
 
 	"github.com/andreburgaud/crypt2go/padding"
 	"golang.org/x/crypto/pbkdf2"
+	"log"
 )
 
 type CipherString struct {
@@ -75,7 +76,7 @@ func NewCipherStringRaw(encryptionType int, ct string, iv string, mac string) (*
 	return &cs, nil
 }
 
-func (cs *CipherString) Decrypt(key []byte) []byte {
+func (cs *CipherString) Decrypt(key []byte) ([]byte, error) {
 	iv, _ := base64.StdEncoding.DecodeString(cs.initializationVector)
 	ct, _ := base64.StdEncoding.DecodeString(cs.cipherText)
 	//mac, _ := base64.StdEncoding.DecodeString(cs.mac)
@@ -90,14 +91,15 @@ func (cs *CipherString) Decrypt(key []byte) []byte {
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return nil, err
 	}
 
 	mode := cipher.NewCBCDecrypter(block, iv)
 
 	mode.CryptBlocks(ct, ct)
-	ct, _ = padding.NewPkcs7Padding(16).Unpad(ct) //TODO, configurable size
-	return ct
+	ct, err = padding.NewPkcs7Padding(16).Unpad(ct) //TODO, configurable size
+	return ct, err
 }
 
 func Encrypt(pt []byte, key []byte) (*CipherString, error) {

@@ -35,7 +35,10 @@ func TestCrypto(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	pt := ct.Decrypt(dk)
+	pt, err := ct.Decrypt(dk)
+	if err != nil {
+		t.Error(err)
+	}
 	if string(pt) != encTest {
 		t.Errorf("Expected %v got %v", encTest, string(pt))
 	}
@@ -44,7 +47,10 @@ func TestCrypto(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	mk := cs.Decrypt(dk)
+	mk, err := cs.Decrypt(dk)
+	if err != nil {
+		t.Error(err)
+	}
 	log.Println(mk)
 	//mk = mk[:32]
 	log.Println(mk)
@@ -53,7 +59,10 @@ func TestCrypto(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	d := ds.Decrypt(mk)
+	d, err := ds.Decrypt(mk)
+	if err != nil {
+		t.Error(err)
+	}
 	log.Println(d)
 	log.Println(string(d))
 

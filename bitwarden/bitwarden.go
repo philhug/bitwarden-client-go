@@ -1,14 +1,6 @@
 package bitwarden
 
 import (
-	/*
-		"bytes"
-		"encoding/json"
-		"fmt"
-		"io"
-		"log"
-		"strings"
-	*/
 	"bytes"
 	"encoding/json"
 	"io"
@@ -17,10 +9,10 @@ import (
 )
 
 const (
-	defaultAPIBaseURL      = "http://localhost:8080/api/"
-	defaultIdentityBaseURL = "http://localhost:8080/identity/"
-	defaultWebVaultBaseURL = "http://localhost:4001/"
-	defaultIconsBaseURL    = "http://localhost:8080/icons/"
+	defaultAPIBaseURL      = "https://api.bitwarden.com/"
+	defaultIdentityBaseURL = "https://identity.bitwarden.com/"
+	defaultWebVaultBaseURL = "https://vault.bitwarden.com/"
+	defaultIconsBaseURL    = "https://icons.bitwarden.com/"
 	apiVersion             = "0.0.1"
 	defaultUserAgent       = "go-bitwarden/" + apiVersion
 )
@@ -42,7 +34,10 @@ type Client struct {
 	common service // Reuse a single struct instead of allocating one for each service on the heap.
 
 	// Services
-	Cipher *CipherService
+	Cipher  *CipherService
+	Folder  *FolderService
+	Account *AccountService
+	Sync    *SyncService
 
 	// Set to true to output debugging logs during API calls
 	Debug bool
@@ -70,6 +65,9 @@ func NewClient(httpClient *http.Client) *Client {
 	}
 	c.common.client = c
 	c.Cipher = (*CipherService)(&c.common)
+	c.Folder = (*FolderService)(&c.common)
+	c.Account = (*AccountService)(&c.common)
+	c.Sync = (*SyncService)(&c.common)
 
 	return c
 }

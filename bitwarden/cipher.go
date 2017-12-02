@@ -1,33 +1,24 @@
 package bitwarden
 
-import (
-	"encoding/json"
-	"net/http"
-	"net/url"
-)
-
 type CipherService struct {
 	client *Client
 }
 
 func (c *CipherService) ListCiphers() ([]Cipher, error) {
-	rel := &url.URL{Path: "ciphers"}
-	u := c.client.APIBaseURL.ResolveReference(rel)
-	req, err := http.NewRequest("GET", u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", c.client.UserAgent)
+	req, err := c.client.newRequest("GET", "ciphers", nil)
 
-	resp, err := c.client.httpClient.Do(req)
+	cir := make([]CipherDetailsResponse, 0)
+	data := List{Data: &cir}
+	_, err = c.client.do(req, &data)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-	var ciphers []Cipher
-	err = json.NewDecoder(resp.Body).Decode(&ciphers)
-	return ciphers, err
+
+	ci := make([]Cipher, len(cir))
+	for i, c := range cir {
+		ci[i] = c.ToCipher()
+	}
+	return ci, err
 }
 
 func (c *CipherService) AddCipher(cipher *Cipher) (*Cipher, error) {
