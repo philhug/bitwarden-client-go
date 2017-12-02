@@ -30,7 +30,7 @@ func main() {
 	}
 	fmt.Println(ciphers)
 
-	cipher.Data.Password = "bla"
+	cipher.Login.Password = "bla"
 	cipher, err = client.Cipher.UpdateCipher(cipher)
 	if err != nil {
 		log.Fatal(err)
