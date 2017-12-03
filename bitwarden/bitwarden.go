@@ -3,6 +3,7 @@ package bitwarden
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -95,11 +96,45 @@ func (c *Client) newRequest(method, path string, body interface{}) (*http.Reques
 	return req, nil
 }
 
+type HttpErrorResponse struct {
+	HttpResponse *http.Response
+	ErrorResponse
+}
+
+// Error implements the error interface.
+func (r *HttpErrorResponse) Error() string {
+	return fmt.Sprintf("%v %v: %v %v",
+		r.HttpResponse.Request.Method, r.HttpResponse.Request.URL,
+		r.HttpResponse.StatusCode, r.Message)
+}
+
+func CheckResponse(resp *http.Response) error {
+	if code := resp.StatusCode; 200 <= code && code <= 299 {
+		return nil
+	}
+
+	errorResponse := &HttpErrorResponse{}
+	errorResponse.HttpResponse = resp
+
+	err := json.NewDecoder(resp.Body).Decode(errorResponse)
+	if err != nil {
+		return err
+	}
+
+	return errorResponse
+}
+
 func (c *Client) do(req *http.Request, v interface{}) (*http.Response, error) {
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
+
+	err = CheckResponse(resp)
+	if err != nil {
+		return resp, err
+	}
+
 	defer resp.Body.Close()
 	err = json.NewDecoder(resp.Body).Decode(v)
 	return resp, err
