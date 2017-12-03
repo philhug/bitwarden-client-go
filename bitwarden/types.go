@@ -16,6 +16,12 @@ const (
 	CipherType_Identity   = iota
 )
 
+const (
+	FieldType_Text    = iota
+	FieldType_Hidden  = iota
+	FieldType_Boolean = iota
+)
+
 type Account struct {
 	Id                 string `json:"id"`
 	Name               string `json:"name"`
@@ -145,17 +151,23 @@ type CipherMiniDetailsResponse struct {
 	CollectionIds []string
 }
 
+type FieldData struct {
+	Type  int
+	Name  string
+	Value string
+}
+
 type CipherData struct {
 	Name   string
 	Notes  *string
-	Fields []string
+	Fields *[]FieldData
 }
 
 type loginData struct {
 	CipherData
-	URI      string  `json:"uri"`
-	Username string  `json:"username"`
-	Password string  `json:"password"`
+	URI      string `json:"uri"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 	ToTp     *string `json:"totp"`
 }
 
