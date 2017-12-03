@@ -47,16 +47,21 @@ func TestCrypto(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	mk, err := cs.Decrypt(dk)
+	mkb, err := cs.Decrypt(dk)
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println(mk)
+	log.Println(mkb)
+	mk, err := NewCryptoKey(mkb, AesCbc256_HmacSha256_B64)
+	if err != nil {
+		t.Error(err)
+	}
 
 	ds, err := NewCipherString(encdata)
 	if err != nil {
 		t.Error(err)
 	}
+
 	d, err := ds.Decrypt(mk)
 	if err != nil {
 		t.Error(err)

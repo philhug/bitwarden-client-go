@@ -10,8 +10,10 @@ import (
 )
 
 const (
-	defaultAPIBaseURL      = "https://api.bitwarden.com/"
-	defaultIdentityBaseURL = "https://identity.bitwarden.com/"
+	//defaultAPIBaseURL      = "https://api.bitwarden.com/"
+	//defaultIdentityBaseURL = "https://identity.bitwarden.com/"
+	defaultAPIBaseURL      = "http://localhost:8080/api/"
+	defaultIdentityBaseURL = "http://localhost:8080/identity/"
 	defaultWebVaultBaseURL = "https://vault.bitwarden.com/"
 	defaultIconsBaseURL    = "https://icons.bitwarden.com/"
 	apiVersion             = "0.0.1"

@@ -62,7 +62,7 @@ command.`,
 			log.Fatal(err)
 		}
 
-		mk, err := cs.Decrypt(dk)
+		mk, err := cs.DecryptKey(dk, bitwarden.AesCbc256_HmacSha256_B64)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -131,10 +131,14 @@ command.`,
 
 				switch ciph.Type {
 				case bitwarden.CipherType_Login:
+					var name string
 					var notes string
 					var uri string
 					var username string
 					var password string
+					if ciph.Login.Name != nil {
+						name = *ciph.Login.Name
+					}
 					if ciph.Login.Notes != nil {
 						notes = *ciph.Login.Notes
 					}
@@ -147,13 +151,17 @@ command.`,
 					if ciph.Login.Password != nil {
 						password = *ciph.Login.Password
 					}
-					w.Write([]string{folder, "", "login", ciph.Login.Name, notes, "", uri, username, password, ""})
+					w.Write([]string{folder, "", "login", name, notes, "", uri, username, password, ""})
 				case bitwarden.CipherType_SecureNote:
+					var name string
 					var notes string
+					if ciph.SecureNote.Name != nil {
+						name = *ciph.SecureNote.Name
+					}
 					if ciph.SecureNote.Notes != nil {
 						notes = *ciph.SecureNote.Notes
 					}
-					w.Write([]string{folder, "", "note", ciph.SecureNote.Name, notes, "", "", "", "", ""})
+					w.Write([]string{folder, "", "note", name, notes, "", "", "", "", ""})
 
 				default:
 					log.Println("unknown ciph type, skipping... ", ciph.Type)

@@ -3,6 +3,7 @@ package bitwarden
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/andreburgaud/crypt2go/padding"
 	"golang.org/x/crypto/pbkdf2"
-	"log"
 )
 
 type CipherString struct {
@@ -26,6 +26,12 @@ type CipherString struct {
 	mac                  string
 }
 
+type CryptoKey struct {
+	EncKey         []byte
+	MacKey         []byte
+	EncryptionType int
+}
+
 const (
 	AesCbc256_B64                     = iota
 	AesCbc128_HmacSha256_B64          = iota
@@ -35,6 +41,26 @@ const (
 	Rsa2048_OaepSha256_HmacSha256_B64 = iota
 	Rsa2048_OaepSha1_HmacSha256_B64   = iota
 )
+
+func NewCryptoKey(key []byte, encryptionType int) (CryptoKey, error) {
+	c := CryptoKey{EncryptionType: encryptionType}
+
+	switch encryptionType {
+	case AesCbc256_B64:
+		c.EncKey = key
+	case AesCbc256_HmacSha256_B64:
+		c.EncKey = key[:32]
+		c.MacKey = key[32:]
+	default:
+		return c, fmt.Errorf("Invalid encryption type: %d", encryptionType)
+	}
+
+	if len(key) != (len(c.EncKey) + len(c.MacKey)) {
+		return c, fmt.Errorf("Invalid key size: %d", len(key))
+	}
+
+	return c, nil
+}
 
 func NewCipherString(encryptedString string) (*CipherString, error) {
 	cs := CipherString{}
@@ -60,7 +86,7 @@ func NewCipherString(encryptedString string) (*CipherString, error) {
 		cs.cipherText = encPieces[1]
 	case AesCbc256_HmacSha256_B64:
 		if len(encPieces) != 3 {
-
+			return nil, fmt.Errorf("invalid key body len %d", len(encPieces))
 		}
 		cs.initializationVector = encPieces[0]
 		cs.cipherText = encPieces[1]
@@ -76,34 +102,59 @@ func NewCipherStringRaw(encryptionType int, ct string, iv string, mac string) (*
 	return &cs, nil
 }
 
-func (cs *CipherString) Decrypt(key []byte) ([]byte, error) {
-	iv, _ := base64.StdEncoding.DecodeString(cs.initializationVector)
-	ct, _ := base64.StdEncoding.DecodeString(cs.cipherText)
-	//mac, _ := base64.StdEncoding.DecodeString(cs.mac)
+func (cs *CipherString) ToString() string {
+	s := cs.initializationVector + "|" + cs.cipherText
+	if cs.mac != "" {
+		s = s + "|" + cs.mac
+	}
+	return fmt.Sprintf("%d.%s", cs.encryptionType, s)
+}
 
-	//var hmac []byte
-	switch cs.encryptionType {
-	case AesCbc256_HmacSha256_B64:
-		//	hmac = key[32:]
-		key = key[:32]
-	default:
+func (cs *CipherString) DecryptKey(key CryptoKey, encryptionType int) (CryptoKey, error) {
+	kb, err := cs.Decrypt(key)
+	if err != nil {
+		return CryptoKey{}, err
+	}
+	k, err := NewCryptoKey(kb, encryptionType)
+	return k, err
+}
+
+func (cs *CipherString) Decrypt(key CryptoKey) ([]byte, error) {
+	iv, err := base64.StdEncoding.DecodeString(cs.initializationVector)
+	if err != nil {
+		return nil, err
 	}
 
-	block, err := aes.NewCipher(key)
+	ct, err := base64.StdEncoding.DecodeString(cs.cipherText)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
+	}
+
+	block, err := aes.NewCipher(key.EncKey)
+	if err != nil {
 		return nil, err
 	}
 
 	mode := cipher.NewCBCDecrypter(block, iv)
 
+	if cs.mac != "" {
+		mac := hmac.New(sha256.New, key.MacKey)
+		mac.Write(iv)
+		mac.Write(ct)
+		ms := mac.Sum(nil)
+		if base64.StdEncoding.EncodeToString(ms) != cs.mac {
+			return ct, fmt.Errorf("MAC doesn't match %s %s", cs.mac, base64.StdEncoding.EncodeToString(ms))
+		}
+	}
+
 	mode.CryptBlocks(ct, ct)
+
 	ct, err = padding.NewPkcs7Padding(16).Unpad(ct) //TODO, configurable size
 	return ct, err
 }
 
-func Encrypt(pt []byte, key []byte) (*CipherString, error) {
-	block, err := aes.NewCipher(key)
+func Encrypt(pt []byte, key CryptoKey) (*CipherString, error) {
+	block, err := aes.NewCipher(key.EncKey)
 	if err != nil {
 		panic(err)
 	}
@@ -120,7 +171,14 @@ func Encrypt(pt []byte, key []byte) (*CipherString, error) {
 	mode := cipher.NewCBCEncrypter(block, iv)
 	mode.CryptBlocks(ct, pt)
 
-	cs := CipherString{encryptionType: 0, cipherText: base64.StdEncoding.EncodeToString(ct), initializationVector: base64.StdEncoding.EncodeToString(iv)}
+	cs := CipherString{encryptionType: key.EncryptionType, cipherText: base64.StdEncoding.EncodeToString(ct), initializationVector: base64.StdEncoding.EncodeToString(iv)}
+
+	if len(key.MacKey) > 0 {
+		mac := hmac.New(sha256.New, key.MacKey)
+		mac.Write(iv)
+		mac.Write(ct)
+		cs.mac = base64.StdEncoding.EncodeToString(mac.Sum(nil))
+	}
 	return &cs, nil
 }
 
@@ -129,16 +187,21 @@ func MakeEncKey(key []byte) (*CipherString, error) {
 	if _, err := io.ReadFull(rand.Reader, b); err != nil {
 		panic(err)
 	}
-	return Encrypt(b, key)
+	k, err := NewCryptoKey(key, AesCbc256_HmacSha256_B64)
+	if err != nil {
+		return nil, err
+	}
+	return Encrypt(b, k)
 
 }
 
-func MakeKey(password string, salt string) []byte {
+func MakeKey(password string, salt string) CryptoKey {
 	dk := pbkdf2.Key([]byte(password), []byte(salt), 5000, 256/8, sha256.New)
-	return dk
+	k := CryptoKey{EncKey: dk, EncryptionType: AesCbc256_B64}
+	return k
 }
 
-func HashPassword(password string, key []byte) string {
-	hash := pbkdf2.Key(key, []byte(password), 1, 256/8, sha256.New)
+func HashPassword(password string, key CryptoKey) string {
+	hash := pbkdf2.Key(key.EncKey, []byte(password), 1, 256/8, sha256.New)
 	return base64.StdEncoding.EncodeToString(hash)
 }

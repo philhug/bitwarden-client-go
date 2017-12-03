@@ -40,10 +40,10 @@ type Cipher struct {
 	Favorite            bool
 	Edit                bool
 	Id                  string
-	Login               *loginData      `json:"Login,omitempty"`
-	Card                *cardData       `json:"Card,omitempty"`
-	SecureNote          *secureNoteData `json:"SecureNote,omitempty"`
-	Identity            *identityData   `json:"Identity,omitempty"`
+	Login               *LoginData      `json:"Login,omitempty"`
+	Card                *CardData       `json:"Card,omitempty"`
+	SecureNote          *SecureNoteData `json:"SecureNote,omitempty"`
+	Identity            *IdentityData   `json:"Identity,omitempty"`
 	Data                interface{}
 	Attachments         []string
 	OrganizationUseTotp bool
@@ -116,9 +116,81 @@ type List struct {
 }
 
 // Experimental
+// Request objects
+type CipherRequest struct {
+	Type           int
+	OrganizationId *string
+	FolderId       *string
+	Favorite       bool
+	Name           *string
+	Notes          *string
+	Fields         *[]FieldData
+	Attachments    *[]string
+
+	Login      *LoginData      `json:"Login,omitempty"`
+	Card       *CardData       `json:"Card,omitempty"`
+	SecureNote *SecureNoteData `json:"SecureNote,omitempty"`
+	Identity   *IdentityData   `json:"Identity,omitempty"`
+
+	RevisionDate Time
+}
+
+func (cr *CipherRequest) FromCipher(c Cipher) error {
+	j, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(j, cr)
+	switch c.Type {
+	case CipherType_Login:
+		cr.Name = c.Login.Name
+		cr.Fields = c.Login.Fields
+		cr.Login.Name = nil
+		cr.Login.Fields = nil
+	case CipherType_Card:
+		cr.Name = c.Card.Name
+		cr.Fields = c.Card.Fields
+		cr.Card.Name = nil
+		cr.Card.Fields = nil
+	case CipherType_Identity:
+		cr.Name = c.Identity.Name
+		cr.Fields = c.Identity.Fields
+		cr.Identity.Name = nil
+		cr.Identity.Fields = nil
+	case CipherType_SecureNote:
+		cr.Name = c.SecureNote.Name
+		cr.Fields = c.SecureNote.Fields
+		cr.SecureNote.Name = nil
+		cr.SecureNote.Fields = nil
+	default:
+		log.Fatal("invalid cipher type")
+	}
+	return err
+}
+
+func (cr *CipherRequest) ToCipher() (Cipher, error) {
+	var c Cipher
+	j, err := json.Marshal(cr)
+	if err != nil {
+		return c, err
+	}
+	err = json.Unmarshal(j, c)
+	return c, err
+}
+
+// Response objects
 type Response struct {
 	// TODO
 	Object string
+}
+
+type ErrorResponse struct {
+	Response
+
+	ExceptionMessage    string
+	ExceptionStackTrace string
+	Message             string
+	ValidationErrors    map[string][2]string
 }
 
 type CipherMiniResponse struct {
@@ -158,12 +230,12 @@ type FieldData struct {
 }
 
 type CipherData struct {
-	Name   string
-	Notes  *string
-	Fields *[]FieldData
+	Name   *string      `json:"Name,omitempty"`
+	Notes  *string      `json:"Notes,omitempty"`
+	Fields *[]FieldData `json:"Fields,omitempty"`
 }
 
-type loginData struct {
+type LoginData struct {
 	CipherData
 	URI      *string `json:"Uri"`
 	Username *string `json:"Username"`
@@ -171,7 +243,7 @@ type loginData struct {
 	ToTp     *string `json:"Totp"`
 }
 
-type cardData struct {
+type CardData struct {
 	CipherData
 	CardholderName *string
 	Brand          *string
@@ -181,7 +253,7 @@ type cardData struct {
 	Code           *string
 }
 
-type identityData struct {
+type IdentityData struct {
 	CipherData
 	Title          *string
 	FirstName      *string
@@ -203,7 +275,7 @@ type identityData struct {
 	LicenseNumber  *string
 }
 
-type secureNoteData struct {
+type SecureNoteData struct {
 	CipherData
 }
 

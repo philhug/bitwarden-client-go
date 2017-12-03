@@ -22,37 +22,52 @@ func (c *CipherService) ListCiphers() ([]Cipher, error) {
 }
 
 func (c *CipherService) AddCipher(cipher *Cipher) (*Cipher, error) {
-	req, err := c.client.newRequest("POST", "ciphers", cipher)
-
-	ci := Cipher{}
-	_, err = c.client.do(req, &ci)
+	creq := CipherRequest{}
+	err := creq.FromCipher(*cipher)
 	if err != nil {
 		return nil, err
 	}
+	req, err := c.client.newRequest("POST", "ciphers", creq)
 
+	cres := CipherResponse{}
+	_, err = c.client.do(req, &cres)
+	if err != nil {
+		return nil, err
+	}
+	ci := cres.ToCipher()
 	return &ci, err
 }
 
 func (c *CipherService) UpdateCipher(cipher *Cipher) (*Cipher, error) {
-	req, err := c.client.newRequest("PUT", "ciphers/"+cipher.Id, cipher)
-
-	ci := Cipher{}
-	_, err = c.client.do(req, &ci)
+	creq := CipherRequest{}
+	err := creq.FromCipher(*cipher)
 	if err != nil {
 		return nil, err
 	}
+	req, err := c.client.newRequest("PUT", "ciphers/"+cipher.Id, creq)
 
+	cres := CipherResponse{}
+	_, err = c.client.do(req, &cres)
+	if err != nil {
+		return nil, err
+	}
+	ci := cres.ToCipher()
 	return &ci, nil
 }
 
 func (c *CipherService) DeleteCipher(cipher *Cipher) (*Cipher, error) {
-	req, err := c.client.newRequest("DELETE", "ciphers/"+cipher.Id, cipher)
-
-	ci := Cipher{}
-	_, err = c.client.do(req, &ci)
+	creq := CipherRequest{}
+	err := creq.FromCipher(*cipher)
 	if err != nil {
 		return nil, err
 	}
+	req, err := c.client.newRequest("DELETE", "ciphers/"+cipher.Id, creq)
 
+	cres := CipherResponse{}
+	_, err = c.client.do(req, &cres)
+	if err != nil {
+		return nil, err
+	}
+	ci := cres.ToCipher()
 	return &ci, nil
 }

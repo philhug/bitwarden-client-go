@@ -9,15 +9,38 @@ import (
 
 func main() {
 
-	var username = "test@example.com"
+	var username = "user@example.com"
 	var password = "password"
 
 	client, err := bitwarden.NewUserPasswordAuthClient(username, password)
 	if err != nil {
 		log.Fatal(err)
 	}
+	var profile bitwarden.Account
+	profile, err = client.Account.GetProfile()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	c := bitwarden.Cipher{Type: 1, Data: bitwarden.CipherData{Name: "Test"}}
+	dk := bitwarden.MakeKey(password, username)
+
+	cs, err := bitwarden.NewCipherString(profile.Key)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mk, err := cs.DecryptKey(dk, bitwarden.AesCbc256_HmacSha256_B64)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s := "Test"
+	c := bitwarden.Cipher{Type: 1, Login: &bitwarden.LoginData{CipherData: bitwarden.CipherData{Name: &s}}}
+	err = c.Encrypt(mk)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	cipher, err := client.Cipher.AddCipher(&c)
 	if err != nil {
 		log.Fatal(err)
@@ -29,8 +52,13 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println(ciphers)
+	fmt.Println(cipher)
+	fmt.Println(cipher.Login)
 
-	cipher.Login.Password = "bla"
+	cipher.Decrypt(mk)
+	pass := "bla"
+	cipher.Login.Password = &pass
+	cipher.Encrypt(mk)
 	cipher, err = client.Cipher.UpdateCipher(cipher)
 	if err != nil {
 		log.Fatal(err)

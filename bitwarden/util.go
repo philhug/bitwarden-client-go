@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-func internalDecrypt(v reflect.Value, mk []byte) error {
+func internalDecrypt(v reflect.Value, mk CryptoKey) error {
 
 	switch v.Kind() {
 	case reflect.Ptr:
@@ -42,11 +42,52 @@ func internalDecrypt(v reflect.Value, mk []byte) error {
 	return nil
 }
 
-func decrypt(data interface{}, mk []byte) error {
+func internalEncrypt(v reflect.Value, mk CryptoKey) error {
+
+	switch v.Kind() {
+	case reflect.Ptr:
+		v := v.Elem()
+
+		// Check if the pointer is nil
+		if !v.IsValid() {
+			return nil
+		}
+		return internalEncrypt(v, mk)
+
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			err := internalEncrypt(v.Field(i), mk)
+			if err != nil {
+				return err
+			}
+		}
+	case reflect.Int:
+		return nil
+	case reflect.String:
+		s, err := EncryptString(v.String(), mk)
+		if err != nil {
+			return err
+		}
+		v.SetString(s)
+	case reflect.Slice:
+		for i := 0; i < v.Len(); i += 1 {
+			internalEncrypt(v.Index(i), mk)
+		}
+	default:
+		log.Fatalf("Error, unknown type: %d", v.Kind())
+	}
+	return nil
+}
+
+func decrypt(data interface{}, mk CryptoKey) error {
 	return internalDecrypt(reflect.ValueOf(data), mk)
 }
 
-func (c *Cipher) Decrypt(mk []byte) error {
+func encrypt(data interface{}, mk CryptoKey) error {
+	return internalEncrypt(reflect.ValueOf(data), mk)
+}
+
+func (c *Cipher) Decrypt(mk CryptoKey) error {
 	var err error
 
 	switch c.Type {
@@ -64,7 +105,25 @@ func (c *Cipher) Decrypt(mk []byte) error {
 	return err
 }
 
-func (f *Folder) Decrypt(mk []byte) error {
+func (c *Cipher) Encrypt(mk CryptoKey) error {
+	var err error
+
+	switch c.Type {
+	case CipherType_Login:
+		err = encrypt(&c.Login, mk)
+	case CipherType_Card:
+		err = encrypt(&c.Card, mk)
+	case CipherType_Identity:
+		err = encrypt(&c.Identity, mk)
+	case CipherType_SecureNote:
+		err = encrypt(&c.SecureNote, mk)
+	default:
+		log.Fatal("invalid cipher type")
+	}
+	return err
+}
+
+func (f *Folder) Decrypt(mk CryptoKey) error {
 	var err error
 	f.Name, err = DecryptString(f.Name, mk)
 	return err
@@ -89,12 +148,24 @@ type Decryptable interface {
 	Decrypt(mk []byte) error
 }
 
-func DecryptString(s string, mk []byte) (string, error) {
+func DecryptString(s string, mk CryptoKey) (string, error) {
+	if s == "" {
+		return "", nil
+	}
 	rv, err := DecryptValue(s, mk)
 	return string(rv), err
 }
 
-func DecryptValue(s string, mk []byte) ([]byte, error) {
+func EncryptString(s string, mk CryptoKey) (string, error) {
+	if s == "" {
+		return "", nil
+	}
+
+	rv, err := EncryptValue([]byte(s), mk)
+	return rv, err
+}
+
+func DecryptValue(s string, mk CryptoKey) ([]byte, error) {
 	if s == "" {
 		return []byte(""), nil
 	}
@@ -106,4 +177,14 @@ func DecryptValue(s string, mk []byte) ([]byte, error) {
 	}
 	rv, err = ck.Decrypt(mk)
 	return rv, err
+}
+
+func EncryptValue(v []byte, mk CryptoKey) (string, error) {
+	cs, err := Encrypt(v, mk)
+
+	if err != nil {
+		return "", err
+	}
+	r := cs.ToString()
+	return r, err
 }
