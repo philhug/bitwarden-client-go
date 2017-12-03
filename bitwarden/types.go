@@ -2,7 +2,9 @@ package bitwarden
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -83,13 +85,15 @@ type Time struct {
 }
 
 func (t *Time) UnmarshalJSON(b []byte) error {
-	s := string(b[:23]) + "Z\""
+	st := strings.Trim(string(b), "Z\"")
+
+	s := fmt.Sprintf("\"%sZ\"", st)
 	return t.Time.UnmarshalJSON([]byte(s))
 }
 
 func (t Time) MarshalJSON() ([]byte, error) {
 	b, err := t.Time.MarshalJSON()
-	s := string(b[:23]) + "00000\""
+	s := string(b[:len(b)-2]) + "\""
 	return []byte(s), err
 }
 

@@ -35,6 +35,27 @@ func TestDateTime(t *testing.T) {
 	}
 }
 
+func TestDateTimeUnmarshalJSON(t *testing.T) {
+	s := []byte(`"2017-12-02T23:11:21.6"`)
+	var tm Time
+
+	err := tm.UnmarshalJSON(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Println(tm)
+
+	sd, err := tm.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Println(string(sd))
+
+	if string(sd) != string(s) {
+		t.Fatalf("Decoded time %s doesn't match orginal time %s", sd, s)
+	}
+}
+
 type myTimeStruct struct {
 	Test string
 	Time Time
@@ -42,7 +63,7 @@ type myTimeStruct struct {
 
 func TestDateTimeJSON(t *testing.T) {
 	var tme myTimeStruct
-	jsonTime := []byte(`{"Test":"bla","Time":"2017-11-30T17:18:34.0300000"}`)
+	jsonTime := []byte(`{"Test":"bla","Time":"2017-11-30T17:18:34.031234"}`)
 
 	err := json.Unmarshal(jsonTime, &tme)
 	if err != nil {
