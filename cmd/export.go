@@ -7,8 +7,10 @@ import (
 	"io/ioutil"
 	"log"
 
+	"encoding/csv"
 	"github.com/philhug/bitwarden-client-go/bitwarden"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 var format string
@@ -95,6 +97,69 @@ command.`,
 			}
 
 			j, _ = json.MarshalIndent(folders, "", "  ")
+		case "bitwarden-csv":
+			fldr := make(map[string]string, 0)
+			w := csv.NewWriter(os.Stdout)
+			w.Write([]string{"folder", "favorite", "type", "name", "notes", "fields", "login_uri", "login_username", "login_password", "login_totp"})
+
+			folders, err := client.Folder.ListFolders()
+			if err != nil {
+				log.Fatal(err)
+			}
+			for i, f := range folders {
+				err := f.Decrypt(mk)
+				folders[i] = f
+				fldr[f.Id] = f.Name
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+
+			ciphers, err := client.Cipher.ListCiphers()
+			if err != nil {
+				log.Fatal(err)
+			}
+			for _, ciph := range ciphers {
+				err := ciph.Decrypt(mk)
+				if err != nil {
+					log.Fatal(err)
+				}
+				var folder = ""
+				if ciph.FolderId != nil {
+					folder = fldr[*ciph.FolderId]
+				}
+
+				switch ciph.Type {
+				case bitwarden.CipherType_Login:
+					var notes string
+					var uri string
+					var username string
+					var password string
+					if ciph.Login.Notes != nil {
+						notes = *ciph.Login.Notes
+					}
+					if ciph.Login.URI != nil {
+						uri = *ciph.Login.URI
+					}
+					if ciph.Login.Username != nil {
+						username = *ciph.Login.Username
+					}
+					if ciph.Login.Password != nil {
+						password = *ciph.Login.Password
+					}
+					w.Write([]string{folder, "", "login", ciph.Login.Name, notes, "", uri, username, password, ""})
+				case bitwarden.CipherType_SecureNote:
+					var notes string
+					if ciph.SecureNote.Notes != nil {
+						notes = *ciph.SecureNote.Notes
+					}
+					w.Write([]string{folder, "", "note", ciph.SecureNote.Name, notes, "", "", "", "", ""})
+
+				default:
+					log.Println("unknown ciph type, skipping... ", ciph.Type)
+				}
+			}
+			w.Flush()
 
 		case "sync-raw":
 			sync, err := client.Sync.GetSync()
@@ -140,10 +205,12 @@ command.`,
 			}
 			j, _ = json.MarshalIndent(ciphs, "", "  ")
 		}
-		if filename == "" {
-			fmt.Println(string(j))
-		} else {
-			ioutil.WriteFile(filename, j, 0644)
+		if j != nil {
+			if filename == "" {
+				fmt.Println(string(j))
+			} else {
+				ioutil.WriteFile(filename, j, 0644)
+			}
 		}
 	},
 }
@@ -153,7 +220,9 @@ func IsValidExportFormat(format string) bool {
 	case
 		"folders",
 		"ciphers",
-		"sync-decrypted":
+		"sync-raw",
+		"sync-decrypted",
+		"bitwarden-csv":
 		return true
 	}
 	return false
