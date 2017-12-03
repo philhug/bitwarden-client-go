@@ -10,16 +10,21 @@ func internalDecrypt(v reflect.Value, mk CryptoKey) error {
 
 	switch v.Kind() {
 	case reflect.Ptr:
-		v := v.Elem()
+		nv := v.Elem()
 
 		// Check if the pointer is nil
-		if !v.IsValid() {
+		if !nv.IsValid() {
 			return nil
 		}
-		err := internalDecrypt(v, mk)
+		err := internalDecrypt(nv, mk)
 		if err != nil {
-			v.SetPointer(nil)
+			log.Print(err)
+			invalid := (*string)(nil)
+			t := reflect.TypeOf(invalid)
+			v.Set(reflect.Indirect(reflect.New(t)))
+			err = nil
 		}
+		return err
 
 	case reflect.Struct:
 		for i := 0; i < v.NumField(); i++ {
@@ -151,7 +156,7 @@ func (f *Folder) Encrypt(mk CryptoKey) error {
 	return err
 }
 
-func (l List) Decrypt(mk []byte) error {
+func (l List) Decrypt(mk CryptoKey) error {
 	x, ok := (l.Data).([]Decryptable)
 	if !ok {
 		log.Fatal("object doesn't implement Decryptable")
@@ -167,7 +172,7 @@ func (l List) Decrypt(mk []byte) error {
 }
 
 type Decryptable interface {
-	Decrypt(mk []byte) error
+	Decrypt(mk CryptoKey) error
 }
 
 func DecryptString(s string, mk CryptoKey) (string, error) {

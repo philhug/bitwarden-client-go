@@ -331,7 +331,7 @@ type IdentityData struct {
 
 type SecureNoteData struct {
 	CipherData
-	Type string // is int, but sent as string from web
+	Type *string // is int, but sent as string from web
 }
 
 type ProfileOrganizationResponse struct {
