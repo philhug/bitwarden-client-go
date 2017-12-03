@@ -50,7 +50,6 @@ type Cipher struct {
 	Card                *CardData       `json:"Card,omitempty"`
 	SecureNote          *SecureNoteData `json:"SecureNote,omitempty"`
 	Identity            *IdentityData   `json:"Identity,omitempty"`
-	Data                interface{}
 	Attachments         []string
 	OrganizationUseTotp bool
 	RevisionDate        *Time `json:"RevisionDate,omitempty"`
@@ -180,7 +179,24 @@ func (cr *CipherRequest) ToCipher() (Cipher, error) {
 	if err != nil {
 		return c, err
 	}
-	err = json.Unmarshal(j, c)
+	err = json.Unmarshal(j, &c)
+	switch c.Type {
+	case CipherType_Login:
+		c.Login.Name = cr.Name
+		c.Login.Fields = cr.Fields
+	case CipherType_Card:
+		c.Card.Name = cr.Name
+		c.Card.Fields = cr.Fields
+	case CipherType_Identity:
+		c.Identity.Name = cr.Name
+		c.Identity.Fields = cr.Fields
+	case CipherType_SecureNote:
+		c.SecureNote.Name = cr.Name
+		c.SecureNote.Fields = cr.Fields
+	default:
+		log.Fatal("invalid cipher type")
+	}
+
 	return c, err
 }
 
@@ -372,4 +388,37 @@ func NewCipherMiniDetailsResponse(cipher Cipher) CipherMiniDetailsResponse {
 
 	cmdr.Object = "cipherMiniDetails"
 	return cmdr
+}
+
+func (c *Cipher) UnMarshalData(v []byte) (error){
+	switch c.Type {
+	case CipherType_Login:
+		json.Unmarshal(v, &c.Login)
+	case CipherType_Card:
+		json.Unmarshal(v, &c.Card)
+	case CipherType_Identity:
+		json.Unmarshal(v, &c.Identity)
+	case CipherType_SecureNote:
+		json.Unmarshal(v, &c.SecureNote)
+	default:
+		log.Fatal("invalid cipher type")
+	}
+	return nil
+}
+
+func (c *Cipher) MarshalData() ([]byte, error){
+	var v interface{}
+	switch c.Type {
+	case CipherType_Login:
+		v = c.Login
+	case CipherType_Card:
+		v = c.Card
+	case CipherType_Identity:
+		v = c.Identity
+	case CipherType_SecureNote:
+		v = c.SecureNote
+	default:
+		log.Fatal("invalid cipher type")
+	}
+	return json.Marshal(v)
 }
