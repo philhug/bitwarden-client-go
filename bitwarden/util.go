@@ -1,6 +1,7 @@
 package bitwarden
 
 import (
+	"fmt"
 	"log"
 	"reflect"
 )
@@ -15,7 +16,10 @@ func internalDecrypt(v reflect.Value, mk CryptoKey) error {
 		if !v.IsValid() {
 			return nil
 		}
-		return internalDecrypt(v, mk)
+		err := internalDecrypt(v, mk)
+		if err != nil {
+			v.SetPointer(nil)
+		}
 
 	case reflect.Struct:
 		for i := 0; i < v.NumField(); i++ {
@@ -34,7 +38,10 @@ func internalDecrypt(v reflect.Value, mk CryptoKey) error {
 		v.SetString(s)
 	case reflect.Slice:
 		for i := 0; i < v.Len(); i += 1 {
-			internalDecrypt(v.Index(i), mk)
+			err := internalDecrypt(v.Index(i), mk)
+			if err != nil {
+				return err
+			}
 		}
 	default:
 		log.Fatalf("Error, unknown type: %d", v.Kind())
@@ -46,14 +53,20 @@ func internalEncrypt(v reflect.Value, mk CryptoKey) error {
 
 	switch v.Kind() {
 	case reflect.Ptr:
-		v := v.Elem()
+		nv := v.Elem()
 
 		// Check if the pointer is nil
-		if !v.IsValid() {
+		if !nv.IsValid() {
 			return nil
 		}
-		return internalEncrypt(v, mk)
+		err := internalEncrypt(nv, mk)
+		if err != nil {
+			invalid := (*string)(nil)
+			t := reflect.TypeOf(invalid)
 
+			v.Set(reflect.Indirect(reflect.New(t)))
+		}
+		return nil
 	case reflect.Struct:
 		for i := 0; i < v.NumField(); i++ {
 			err := internalEncrypt(v.Field(i), mk)
@@ -71,7 +84,10 @@ func internalEncrypt(v reflect.Value, mk CryptoKey) error {
 		v.SetString(s)
 	case reflect.Slice:
 		for i := 0; i < v.Len(); i += 1 {
-			internalEncrypt(v.Index(i), mk)
+			err := internalEncrypt(v.Index(i), mk)
+			if err != nil {
+				return err
+			}
 		}
 	default:
 		log.Fatalf("Error, unknown type: %d", v.Kind())
@@ -129,6 +145,12 @@ func (f *Folder) Decrypt(mk CryptoKey) error {
 	return err
 }
 
+func (f *Folder) Encrypt(mk CryptoKey) error {
+	var err error
+	f.Name, err = EncryptString(f.Name, mk)
+	return err
+}
+
 func (l List) Decrypt(mk []byte) error {
 	x, ok := (l.Data).([]Decryptable)
 	if !ok {
@@ -149,16 +171,13 @@ type Decryptable interface {
 }
 
 func DecryptString(s string, mk CryptoKey) (string, error) {
-	if s == "" {
-		return "", nil
-	}
 	rv, err := DecryptValue(s, mk)
 	return string(rv), err
 }
 
 func EncryptString(s string, mk CryptoKey) (string, error) {
 	if s == "" {
-		return "", nil
+		return "", fmt.Errorf("Empty string canot be encrypted")
 	}
 
 	rv, err := EncryptValue([]byte(s), mk)
