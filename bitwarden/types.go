@@ -39,7 +39,7 @@ type Cipher struct {
 	OrganizationId      *string
 	Favorite            bool
 	Edit                bool
-	Id                  string
+	Id                  string          `json:"Id,omitempty"`
 	Login               *LoginData      `json:"Login,omitempty"`
 	Card                *CardData       `json:"Card,omitempty"`
 	SecureNote          *SecureNoteData `json:"SecureNote,omitempty"`
@@ -47,7 +47,7 @@ type Cipher struct {
 	Data                interface{}
 	Attachments         []string
 	OrganizationUseTotp bool
-	RevisionDate        Time
+	RevisionDate        *Time `json:"RevisionDate,omitempty"`
 }
 
 type Profile struct {
@@ -107,7 +107,7 @@ type Folder struct {
 	Id           string
 	Name         string
 	Object       string
-	RevisionDate Time
+	RevisionDate *Time
 }
 
 type List struct {
@@ -132,7 +132,7 @@ type CipherRequest struct {
 	SecureNote *SecureNoteData `json:"SecureNote,omitempty"`
 	Identity   *IdentityData   `json:"Identity,omitempty"`
 
-	RevisionDate Time
+	RevisionDate *Time
 }
 
 func (cr *CipherRequest) FromCipher(c Cipher) error {
@@ -201,7 +201,7 @@ type CipherMiniResponse struct {
 	Type           int
 	Data           interface{}
 	Attachments    []string
-	RevisionDate   Time
+	RevisionDate   *Time
 }
 
 type CipherResponse struct {
