@@ -24,6 +24,8 @@ func internalDecrypt(v reflect.Value, mk []byte) error {
 				return err
 			}
 		}
+	case reflect.Int:
+		return nil
 	case reflect.String:
 		s, err := DecryptString(v.String(), mk)
 		if err != nil {
@@ -35,7 +37,7 @@ func internalDecrypt(v reflect.Value, mk []byte) error {
 			internalDecrypt(v.Index(i), mk)
 		}
 	default:
-		log.Fatal("eerrror")
+		log.Fatalf("Error, unknown type: %d", v.Kind())
 	}
 	return nil
 }
