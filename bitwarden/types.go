@@ -165,42 +165,42 @@ type CipherData struct {
 
 type loginData struct {
 	CipherData
-	URI      string `json:"uri"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	ToTp     *string `json:"totp"`
+	URI      *string `json:"Uri"`
+	Username *string `json:"Username"`
+	Password *string `json:"Password"`
+	ToTp     *string `json:"Totp"`
 }
 
 type cardData struct {
 	CipherData
-	CardholderName string
-	Brand          string
-	Number         string
-	ExpMonth       string
-	ExpYear        string
-	Code           string
+	CardholderName *string
+	Brand          *string
+	Number         *string
+	ExpMonth       *string
+	ExpYear        *string
+	Code           *string
 }
 
 type identityData struct {
 	CipherData
-	Title          string
-	FirstName      string
-	MiddleName     string
-	LastName       string
-	Address1       string
-	Address2       string
-	Address3       string
-	City           string
-	State          string
-	PostalCode     string
-	Country        string
-	Company        string
-	Email          string
-	Phone          string
-	SSN            string
-	Username       string
-	PassportNumber string
-	LicenseNumber  string
+	Title          *string
+	FirstName      *string
+	MiddleName     *string
+	LastName       *string
+	Address1       *string
+	Address2       *string
+	Address3       *string
+	City           *string
+	State          *string
+	PostalCode     *string
+	Country        *string
+	Company        *string
+	Email          *string
+	Phone          *string
+	SSN            *string
+	Username       *string
+	PassportNumber *string
+	LicenseNumber  *string
 }
 
 type secureNoteData struct {
