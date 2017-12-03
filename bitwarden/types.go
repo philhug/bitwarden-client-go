@@ -22,9 +22,13 @@ const (
 	FieldType_Boolean = iota
 )
 
+const (
+	SecureNoteType_Generic = iota
+)
+
 type Keys struct {
-    EncryptedPrivateKey string `json:"encryptedPrivateKey"`
-    PublicKey           string `json:"publicKey"`
+	EncryptedPrivateKey string `json:"encryptedPrivateKey"`
+	PublicKey           string `json:"publicKey"`
 }
 
 type Account struct {
@@ -299,6 +303,7 @@ type IdentityData struct {
 
 type SecureNoteData struct {
 	CipherData
+	Type string // is int, but sent as string from web
 }
 
 func (cmr *CipherMiniResponse) ToCipher() Cipher {
@@ -390,7 +395,7 @@ func NewCipherMiniDetailsResponse(cipher Cipher) CipherMiniDetailsResponse {
 	return cmdr
 }
 
-func (c *Cipher) UnMarshalData(v []byte) (error){
+func (c *Cipher) UnMarshalData(v []byte) error {
 	switch c.Type {
 	case CipherType_Login:
 		json.Unmarshal(v, &c.Login)
@@ -406,7 +411,7 @@ func (c *Cipher) UnMarshalData(v []byte) (error){
 	return nil
 }
 
-func (c *Cipher) MarshalData() ([]byte, error){
+func (c *Cipher) MarshalData() ([]byte, error) {
 	var v interface{}
 	switch c.Type {
 	case CipherType_Login:
