@@ -1,16 +1,17 @@
 package cmd
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 
-	"encoding/csv"
 	"github.com/philhug/bitwarden-client-go/bitwarden"
 	"github.com/spf13/cobra"
-	"os"
+	"strings"
 )
 
 var format string
@@ -99,9 +100,19 @@ command.`,
 			j, _ = json.MarshalIndent(folders, "", "  ")
 		case "bitwarden-csv":
 			fldr := make(map[string]string, 0)
-			w := csv.NewWriter(os.Stdout)
-			w.Write([]string{"folder", "favorite", "type", "name", "notes", "fields", "login_uri", "login_username", "login_password", "login_totp"})
+			wo := os.Stdout
+			if filename != "" {
+				f, err := os.Create(filename)
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer f.Close()
 
+				wo = f
+			}
+
+			w := csv.NewWriter(wo)
+			w.Write(strings.Split(BITWARDEN_HEADER, ","))
 			folders, err := client.Folder.ListFolders()
 			if err != nil {
 				log.Fatal(err)
@@ -128,43 +139,13 @@ command.`,
 				if ciph.FolderId != nil {
 					folder = fldr[*ciph.FolderId]
 				}
-
-				switch ciph.Type {
-				case bitwarden.CipherType_Login:
-					var name string
-					var notes string
-					var uri string
-					var username string
-					var password string
-					if ciph.Login.Name != nil {
-						name = *ciph.Login.Name
-					}
-					if ciph.Login.Notes != nil {
-						notes = *ciph.Login.Notes
-					}
-					if ciph.Login.URI != nil {
-						uri = *ciph.Login.URI
-					}
-					if ciph.Login.Username != nil {
-						username = *ciph.Login.Username
-					}
-					if ciph.Login.Password != nil {
-						password = *ciph.Login.Password
-					}
-					w.Write([]string{folder, "", "login", name, notes, "", uri, username, password, ""})
-				case bitwarden.CipherType_SecureNote:
-					var name string
-					var notes string
-					if ciph.SecureNote.Name != nil {
-						name = *ciph.SecureNote.Name
-					}
-					if ciph.SecureNote.Notes != nil {
-						notes = *ciph.SecureNote.Notes
-					}
-					w.Write([]string{folder, "", "note", name, notes, "", "", "", "", ""})
-
-				default:
-					log.Println("unknown ciph type, skipping... ", ciph.Type)
+				csr := CsvRecord{ciph, folder}
+				cr, err := csr.ToCsv(BITWARDEN_HEADER)
+				if err != nil {
+					log.Fatal(err)
+				}
+				if cr != nil {
+					w.Write(cr)
 				}
 			}
 			w.Flush()
