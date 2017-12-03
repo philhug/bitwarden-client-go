@@ -22,6 +22,11 @@ const (
 	FieldType_Boolean = iota
 )
 
+type Keys struct {
+    EncryptedPrivateKey string `json:"encryptedPrivateKey"`
+    PublicKey           string `json:"publicKey"`
+}
+
 type Account struct {
 	Id                 string `json:"id"`
 	Name               string `json:"name"`
@@ -29,6 +34,7 @@ type Account struct {
 	MasterPasswordHash string `json:"masterPasswordHash"`
 	MasterPasswordHint string `json:"masterPasswordHint"`
 	Key                string `json:"key"`
+	Keys               Keys   `json:"keys"`
 	RefreshToken       string `json:"-"`
 }
 
