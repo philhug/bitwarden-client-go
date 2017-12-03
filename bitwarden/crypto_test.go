@@ -52,8 +52,6 @@ func TestCrypto(t *testing.T) {
 		t.Error(err)
 	}
 	log.Println(mk)
-	//mk = mk[:32]
-	log.Println(mk)
 
 	ds, err := NewCipherString(encdata)
 	if err != nil {
@@ -65,33 +63,4 @@ func TestCrypto(t *testing.T) {
 	}
 	log.Println(d)
 	log.Println(string(d))
-
-	/*
-		ke := strings.Split(enckey, ".")
-		et := ke[0] // 0 = AesCbc256_B64
-
-		if et != "0" {
-			log.Println("ERROR, invalid et")
-			return
-		}
-		ep := strings.Split(ke[1], "|")
-
-		log.Println(ep[0])
-		iv, _ := base64.StdEncoding.DecodeString(ep[0])
-		log.Println(iv)
-
-		log.Println(ep[1])
-		ct, _ := base64.StdEncoding.DecodeString(ep[1])
-		log.Println(ct)
-
-		block, err := aes.NewCipher(dk)
-		if err != nil {
-			panic(err)
-		}
-
-		mode := cipher.NewCBCDecrypter(block, iv)
-
-		mode.CryptBlocks(ct, ct)
-		log.Println(ct)
-	*/
 }
