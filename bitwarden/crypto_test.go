@@ -1,7 +1,6 @@
 package bitwarden
 
 import (
-	"log"
 	"testing"
 )
 
@@ -13,6 +12,7 @@ func TestCrypto(t *testing.T) {
 	var enckey = "0.yMeH5ypzRLcyJX69HAt6mQ==|H0mdMpoX1aguKIaCXOreL93JyCpo9ORiX8ZbK+taLXlGZfCb5TOs0eriKa7u1ocBp9gDHwYm5EUyobnbVfZ3uiP2suYWAXKmC4IO67b7ozc="
 
 	var encdata = "2.eWiu5v/7OWt5EiuypCP9nQ==|8vxfq3AsARNjPE8rWcDLSg==|TKN0DmdhK8qjIqLe7WPpjVcAoUghGDxnpWUb4WS0jHQ="
+	var encdata_decrypted = "test"
 
 	var encTest = "TESTING ENCRYPTN"
 
@@ -20,10 +20,8 @@ func TestCrypto(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println(cs)
 
 	dk := MakeKey(password, email)
-	log.Println(dk)
 
 	// MasterPasswordHash
 	hash := HashPassword(password, dk)
@@ -35,10 +33,12 @@ func TestCrypto(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
 	pt, err := ct.Decrypt(dk)
 	if err != nil {
 		t.Error(err)
 	}
+
 	if string(pt) != encTest {
 		t.Errorf("Expected %v got %v", encTest, string(pt))
 	}
@@ -47,14 +47,24 @@ func TestCrypto(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	if cs.ToString() != enckey {
+		t.Errorf("Expected %v got %v", cs.ToString(), enckey)
+
+	}
+
 	mkb, err := cs.Decrypt(dk)
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println(mkb)
+
 	mk, err := NewCryptoKey(mkb, AesCbc256_HmacSha256_B64)
 	if err != nil {
 		t.Error(err)
+	}
+
+	if mk.EncryptionType != AesCbc256_HmacSha256_B64 {
+		t.Errorf("NewCryptoKey: invalid EncryptionType")
 	}
 
 	ds, err := NewCipherString(encdata)
@@ -62,10 +72,18 @@ func TestCrypto(t *testing.T) {
 		t.Error(err)
 	}
 
+	if ds.ToString() != encdata {
+		t.Errorf("Expected %v got %v", ds.ToString(), encdata)
+
+	}
+
 	d, err := ds.Decrypt(mk)
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println(d)
-	log.Println(string(d))
+
+	if string(d) != encdata_decrypted {
+		t.Errorf("Expected %v got %v", string(d), encdata_decrypted)
+	}
+
 }
