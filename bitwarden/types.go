@@ -32,14 +32,42 @@ type Keys struct {
 }
 
 type Account struct {
-	Id                 string `json:"id"`
-	Name               string `json:"name"`
-	Email              string `json:"email"`
-	MasterPasswordHash string `json:"masterPasswordHash"`
-	MasterPasswordHint string `json:"masterPasswordHint"`
-	Key                string `json:"key"`
-	Keys               Keys   `json:"keys"`
-	RefreshToken       string `json:"-"`
+	Id                 string  `json:"id"`
+	Name               string  `json:"name"`
+	Email              string  `json:"email"`
+	MasterPasswordHash string  `json:"masterPasswordHash"`
+	MasterPasswordHint *string `json:"masterPasswordHint,omitempty"`
+	Key                string  `json:"key"`
+	Keys               Keys    `json:"keys"`
+	RefreshToken       string  `json:"-"`
+}
+
+type User struct {
+	Id                              string
+	Name                            string
+	Email                           string
+	EmailVerified                   bool
+	MasterPassword                  string
+	MasterPasswordHint              string
+	Culture                         string
+	SecurityStamp                   string
+	TwoFactorProviders              string
+	TwoFactorRecoveryCode           string
+	EquivalentDomains               string
+	ExcludedGlobalEquivalentDomains string
+	AccountRevisionDate             Time
+	Key                             string
+	PublicKey                       string
+	PrivateKey                      string
+	//Premium                       bool
+	//PremiumExpirationDate         Time
+	//Storage                       int
+	MaxStorageGb int
+	//Gateway                       int
+	//GatewayCustomerId             string
+	//GatewaySubscriptionId         string
+	CreationDate Time
+	RevisionDate Time
 }
 
 // The data we store
@@ -306,6 +334,26 @@ type SecureNoteData struct {
 	Type string // is int, but sent as string from web
 }
 
+type ProfileOrganizationResponse struct {
+}
+
+type ProfileResponse struct {
+	Response
+	Id                 string
+	Name               string
+	Email              string
+	EmailVerified      bool
+	Premium            bool
+	MasterPasswordHint *string
+	Culture            string
+	TwoFactorEnabled   bool
+	Key                string
+	PrivateKey         string
+	SecurityStamp      *string
+
+	Organizations *[]ProfileOrganizationResponse
+}
+
 func (cmr *CipherMiniResponse) ToCipher() Cipher {
 	cipher := Cipher{Id: cmr.Id, Type: cmr.Type, RevisionDate: cmr.RevisionDate, OrganizationId: cmr.OrganizationId, Attachments: cmr.Attachments}
 	v, _ := json.Marshal(cmr.Data)
@@ -426,4 +474,22 @@ func (c *Cipher) MarshalData() ([]byte, error) {
 		log.Fatal("invalid cipher type")
 	}
 	return json.Marshal(v)
+}
+
+func NewProfileResponse(user Account) ProfileResponse {
+	return ProfileResponse{
+		Response:           Response{"profile"},
+		Id:                 user.Id,
+		Name:               user.Name,
+		Email:              user.Email,
+		EmailVerified:      true, // user.EmailVerified
+		Premium:            true, //
+		MasterPasswordHint: nil,  // user.MasterPasswordHint,
+		Culture:            "en-US",
+		TwoFactorEnabled:   false,
+		Key:                user.Key,
+		PrivateKey:         user.Keys.EncryptedPrivateKey,
+		SecurityStamp:      nil, // user.SecurityStamp,
+		Organizations:      nil,
+	}
 }
